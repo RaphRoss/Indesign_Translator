@@ -44,5 +44,5 @@ Ce projet est une application tkinter pour traduire des fichiers IDML en utilisa
       - Une fois la traduction terminée, un message d'information apparaîtra avec les chemins des fichiers traduits.
 
 ## Structure du projet
-Indesign_Translator.py : Script principal contenant l'interface tkinter et la logique de traduction.
-README.md : Ce fichier, contenant les instructions d'utilisation et les informations sur le projet.
+- Indesign_Translator.py : Script principal contenant l'interface tkinter et la logique de traduction.
+- README.md : Ce fichier, contenant les instructions d'utilisation et les informations sur le projet.
