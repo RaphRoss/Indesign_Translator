@@ -88,10 +88,6 @@ def on_translate():
             messagebox.showwarning("Avertissement", "Veuillez sélectionner au moins une langue.")
             return
         
-        total_files = sum([len([name for name in os.listdir(os.path.join(os.path.dirname(file), 'Temp', 'Stories')) if name.endswith('.xml')]) for file in files])
-        total_steps = len(selected_languages) * total_files
-        step = 100 / total_steps
-
         progress_bar['value'] = 0
         progress_bar.grid(row=4, columnspan=3, pady=20)
         
@@ -100,6 +96,16 @@ def on_translate():
             temp_dir = os.path.join(os.path.dirname(file_path), 'Temp')
             with ZipFile(file_path, 'r') as zip_ref:
                 zip_ref.extractall(temp_dir)
+            
+            # Vérification de l'existence du répertoire 'Stories'
+            stories_path = os.path.join(temp_dir, 'Stories')
+            if not os.path.exists(stories_path):
+                messagebox.showerror("Erreur", f"Le répertoire 'Stories' n'existe pas à l'emplacement {stories_path}.")
+                return
+
+            total_files = len([name for name in os.listdir(stories_path) if name.endswith('.xml')])
+            total_steps = len(selected_languages) * total_files
+            step = 100 / total_steps
 
             for lang in selected_languages:
                 output_path = create_idml_zip(file_path, lang, progress_bar, step, root)
