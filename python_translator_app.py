@@ -121,7 +121,7 @@ root = tk.Tk()
 root.title("Indesign Traduction")
 
 # Définir l'icône de la fenêtre et de la barre des tâches
-icon_path = 'C:/Users/rossignolr-stg/Documents/visual studio code/python_test/img/Logo.ico'
+icon_path = os.path.join(os.path.dirname(__file__),  "img/Logo.ico")
 if os.path.exists(icon_path):
     root.iconbitmap(icon_path)
 
