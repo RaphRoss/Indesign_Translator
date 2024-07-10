@@ -1,48 +1,48 @@
-# Indesign Traduction
+# Indesign Translator
 
-Ce projet est une application tkinter pour traduire des fichiers IDML en utilisant l'API DeepL. L'application permet de sélectionner des fichiers IDML, de choisir les langues de traduction, et d'afficher une barre de progression pendant le processus de traduction.
+This project is a tkinter application for translating IDML files using the DeepL API. The application lets you select IDML files, choose translation languages, and display a progress bar during the translation process.
 
-## Fonctionnalités
-- Traduction automatique de fichiers IDML en utilisant l'API DeepL.
-- Interface utilisateur simple et intuitive créée avec tkinter.
-- Prise en charge de plusieurs langues de traduction : Anglais, Allemand, Espagnol.
-- Affichage d'une barre de progression pour suivre l'avancement de la traduction.
+## Features
+- Automatic translation of IDML files using the DeepL API.
+- Simple, intuitive user interface created with tkinter.
+- Support for multiple translation languages: English, German, Spanish.
+- Display of a progress bar to monitor translation progress.
 
-## Prérequis
+## Prerequisites
 - Python 3.x
-- Modules Python : requests, tkinter, zipfile, xml, deepl
+- Python modules: requests, tkinter, zipfile, xml, deepl
 
 ## Installation
-1. Clonez le repository sur votre machine locale :
+1. Clone the repository on your local machine:
 
        git clone https://github.com/votre-utilisateur/indesign-traduction.git
 
-2. Accédez au répertoire du projet :
+2. Go to the project directory :
 
        cd indesign-traduction
 
-3. Installez les dépendances requises :
+3. Install the required dependencies:
 
        pip install requests deepl
 
 ## Configuration
-1. Assurez-vous d'avoir un fichier d'icône au format .ico pour l'icône de la fenêtre. Placez ce fichier dans le répertoire du projet et modifiez le chemin de l'icône dans le script principal (icon_path).
+1. Make sure you have an icon file in .ico format for the window icon. Place this file in the project directory and modify the icon path in the main script (icon_path).
 
-2. Mettez à jour la clé d'authentification DeepL dans le script principal :
+2. Update the authentication key DeepL in the main script:
 
-       auth_key = "votre_cle_deepl:fx"
+       auth_key = "your_deepl_key:fx"
 
-## Utilisation
-1. Exécutez le script principal pour lancer l'application tkinter :
+## Usage
+1. Run the main script to launch the tkinter application:
 
-       python indesign_traduction.py
+       python Indesign_Translator.py
 
-2. Utilisez l'interface pour :
-      - Parcourir et sélectionner des fichiers IDML.
-      - Choisir les langues de traduction (Anglais, Allemand, Espagnol).
-      - Lancer le processus de traduction en cliquant sur le bouton "Traduire".
-      - Une fois la traduction terminée, un message d'information apparaîtra avec les chemins des fichiers traduits.
+2. Use the interface to :
+      - Browse and select IDML files.
+      - Select translation languages (English, German, Spanish).
+      - Start the translation process by clicking on the "Translate" button.
+      - Once the translation is complete, an information message will appear with the paths to the translated files.
 
-## Structure du projet
-- Indesign_Translator.py : Script principal contenant l'interface tkinter et la logique de traduction.
-- README.md : Ce fichier, contenant les instructions d'utilisation et les informations sur le projet.
+## Project structure
+- Indesign_Translator.py: Main script containing the tkinter interface and translation logic.
+- README.md: This file contains user instructions and project information.
