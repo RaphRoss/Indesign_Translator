@@ -38,7 +38,7 @@ def translate_stories(directory, target_langs, progress_bar, step, root):
 
             tree.write(file_path, encoding='UTF-8', xml_declaration=True)
             
-            #Faire avancer la bar
+            #Faire avancer la barre
             current_file += 1
             progress_bar.step(step)
             root.update_idletasks()
