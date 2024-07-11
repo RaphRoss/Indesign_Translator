@@ -6,18 +6,15 @@ from zipfile import ZipFile
 import deepl
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from tkinter import PhotoImage
 import threading
+import datetime
 
-def translate_stories(directory, target_langs, progress_bar, step, root):
+def translate_stories(directory, target_langs, progress_bar, step, root, total_files_label, current_file_label, current_file, total_files):
     stories_path = os.path.join(directory, 'Stories')
     if not os.path.exists(stories_path):
         messagebox.showerror("Erreur", f"Le répertoire 'Stories' n'existe pas à l'emplacement {stories_path}.")
         return
 
-    total_files = len([name for name in os.listdir(stories_path) if name.endswith('.xml')])
-    current_file = 0
-    
     for filename in os.listdir(stories_path):
         if filename.endswith('.xml'):
             file_path = os.path.join(stories_path, filename)
@@ -38,23 +35,36 @@ def translate_stories(directory, target_langs, progress_bar, step, root):
 
             tree.write(file_path, encoding='UTF-8', xml_declaration=True)
             
-            #Faire avancer la barre
+            # Update the progress bar and labels
             current_file += 1
             progress_bar.step(step)
+            percentage = int((current_file / total_files) * 100)
+            total_files_label.config(text=f"Progression: {percentage}%")
+            current_file_label.config(text=f"Fichiers traduits: {current_file}/{total_files}")
             root.update_idletasks()
 
-def create_idml_zip(source_file, target_lang, progress_bar, step, root):
+def create_idml_zip(source_file, target_lang, progress_bar, step, root, total_files_label, current_file_label, current_file, total_files):
     temp_file = os.path.join(os.path.dirname(source_file), 'Temp')
 
     with ZipFile(source_file, 'r') as zip_ref:
         zip_ref.extractall(temp_file)
 
-    translate_stories(temp_file, [target_lang], progress_bar, step, root)
+    translate_stories(temp_file, [target_lang], progress_bar, step, root, total_files_label, current_file_label, current_file, total_files)
 
-    base_name = os.path.splitext(os.path.basename(source_file))[0]
-    output_file = f"{base_name}_{target_lang}.idml"
-    output_path = os.path.join(os.path.dirname(source_file), output_file)
+    # Obtenir les informations de date et heure
+    base_name = os.path.splitext(os.path.basename(source_file))[0] # Nom du fichier sans extension
+    now = datetime.datetime.now() # Date et heure actuelles
+    year = now.strftime("%Y") # Année
+    month = now.strftime("%B") # Mois en toutes lettres
+    day = now.strftime("%d") # Jour
+    time = now.strftime("%Hh%M") # Heure et minute
 
+    output_dir = os.path.join(os.path.dirname(source_file), "Traduction", year, month)
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = f"{base_name}_{target_lang}_{day}_{time}.idml"
+    output_path = os.path.join(output_dir, output_file)
+
+    # Créer le chemin du dossier de sortie 
     with zipfile.ZipFile(output_path, 'w', compression=zipfile.ZIP_STORED) as zf:
         mimetype_path = os.path.join(temp_file, 'mimetype')
         zf.write(mimetype_path, arcname='mimetype')
@@ -88,31 +98,34 @@ def on_translate():
             messagebox.showwarning("Avertissement", "Veuillez sélectionner au moins une langue.")
             return
         
+        total_files = sum([len([name for name in os.listdir(os.path.join(os.path.dirname(file), 'Temp', 'Stories')) if name.endswith('.xml')]) for file in files])
+        total_steps = len(selected_languages) * total_files
+        step = 100 / total_steps
+
         progress_bar['value'] = 0
-        progress_bar.grid(row=4, columnspan=3, pady=20)
+        progress_bar.grid(row=6, columnspan=3, pady=20)
+        total_files_label.grid(row=4, columnspan=3, pady=5)
+        current_file_label.grid(row=5, columnspan=3, pady=5)
         
         translated_files = []
+        current_file = 0
         for file_path in files:
             temp_dir = os.path.join(os.path.dirname(file_path), 'Temp')
             with ZipFile(file_path, 'r') as zip_ref:
                 zip_ref.extractall(temp_dir)
-            
-            # Vérification de l'existence du répertoire 'Stories'
-            stories_path = os.path.join(temp_dir, 'Stories')
-            if not os.path.exists(stories_path):
-                messagebox.showerror("Erreur", f"Le répertoire 'Stories' n'existe pas à l'emplacement {stories_path}.")
-                return
-
-            total_files = len([name for name in os.listdir(stories_path) if name.endswith('.xml')])
-            total_steps = len(selected_languages) * total_files
-            step = 100 / total_steps
 
             for lang in selected_languages:
-                output_path = create_idml_zip(file_path, lang, progress_bar, step, root)
+                output_path = create_idml_zip(file_path, lang, progress_bar, step, root, total_files_label, current_file_label, current_file, total_files)
                 translated_files.append(output_path)
 
         progress_bar.grid_forget()
-        messagebox.showinfo("Information", f"Traduction terminée. Fichiers traduits:\n" + "\n".join(translated_files))
+        total_files_label.grid_forget()
+        current_file_label.grid_forget()
+        
+        # Ouvrir l'explorateur de fichiers à l'emplacement des fichiers traduits
+        if translated_files:
+            output_dir = os.path.dirname(translated_files[0])
+            os.startfile(output_dir)
 
     translation_thread = threading.Thread(target=run_translation)
     translation_thread.start()
@@ -127,7 +140,7 @@ root = tk.Tk()
 root.title("Indesign Traduction")
 
 # Définir l'icône de la fenêtre et de la barre des tâches
-icon_path = os.path.join(os.path.dirname(__file__),  "img/Logo.ico")
+icon_path = os.path.join(os.path.dirname(__file__), "img/Logo.ico")
 if os.path.exists(icon_path):
     root.iconbitmap(icon_path)
 
@@ -162,8 +175,18 @@ tk.Radiobutton(root, text="Non", variable=notify_var, value="Non").grid(row=2, c
 translate_button = tk.Button(root, text="Traduire", command=on_translate)
 translate_button.grid(row=3, columnspan=3, pady=20)
 
+# Pourcentage de progression
+total_files_label = tk.Label(root, text="Progression: 0%")
+total_files_label.grid(row=4, columnspan=3, pady=5)
+total_files_label.grid_forget()
+
+# Nombre de lignes traduites et nombre total de lignes
+current_file_label = tk.Label(root, text="Lignes traduites: 0/0")
+current_file_label.grid(row=5, columnspan=3, pady=5)
+current_file_label.grid_forget()
+
 progress_bar = ttk.Progressbar(root, orient='horizontal', length=300, mode='determinate')
-progress_bar.grid(row=4, columnspan=3, pady=20)
+progress_bar.grid(row=6, columnspan=3, pady=20)
 progress_bar.grid_forget()
 
 # Exécution de la boucle principale
