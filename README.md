@@ -33,7 +33,7 @@ This InDesign Translation Tool is a Python application designed to translate IDM
 
 1. Run the script using Python:
    ```bash
-   python main.py
+   python Indesign_Translator.py
 2. Enter your DeepL API key.
 3. Select the IDML files you want to translate.
 4. Choose the target languages.
