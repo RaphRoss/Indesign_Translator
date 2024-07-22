@@ -1,3 +1,26 @@
+import subprocess
+import importlib
+
+# Liste des modules nécessaires
+required_modules = [
+    'deepl', 'tkinter', 'threading', 'datetime', 'os', 'xml.etree.ElementTree', 
+    'zipfile', 're', 'tkinter.filedialog', 'tkinter.messagebox', 'tkinter.ttk'
+]
+
+# Vérifier et installer les modules manquants
+def check_and_install_modules(modules):
+    for module in modules:
+        try:
+            importlib.import_module(module)
+            print(f"Le module '{module}' est déjà installé.")
+        except ImportError:
+            print(f"Le module '{module}' n'est pas installé. Installation en cours...")
+            subprocess.check_call(['pip', 'install', module])
+            print(f"Le module '{module}' a été installé.")
+
+# Exécuter la vérification et l'installation
+check_and_install_modules(required_modules)
+
 import deepl
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -12,6 +35,7 @@ import re
 # Flag to control the translation thread
 stop_translation = False
 current_temp_dir = None  # Variable globale pour stocker le répertoire temporaire
+output_path = None
 
 def translate_stories(directory, target_langs, progress_bar, total_files, progress_label, root, translator, glossary_id=None):
     global stop_translation
@@ -225,8 +249,17 @@ def on_stop():
     if current_temp_dir and os.path.exists(current_temp_dir):
         try:
             os.rmdir(current_temp_dir)
+            os.remove(output_path)
         except OSError as e:
             print(f"Erreur lors de la suppression du répertoire temporaire {current_temp_dir}: {str(e)}")
+
+def toggle_api_key_visibility():
+    if api_key_entry.cget('show') == '*':
+        api_key_entry.config(show='')
+        toggle_button.config(text='Cacher')
+    else:
+        api_key_entry.config(show='*')
+        toggle_button.config(text='Afficher')
 
 def disable_buttons():
     translate_button.config(state=tk.DISABLED)
@@ -321,6 +354,7 @@ style.configure("TButton", font=("Arial", 10), padding=5)
 style.configure("TCheckbutton", font=("Arial", 10), padding=5)
 style.configure("TRadiobutton", font=("Arial", 10), padding=5)
 
+
 # Frame principale
 main_frame = ttk.Frame(root, padding="10 10 10 10")
 main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
@@ -332,6 +366,7 @@ file_path_entry.grid(row=0, column=1, padx=10, pady=10)
 browse_dir_button = ttk.Button(main_frame, text="Parcourir Dossier", command=browse_directory)
 browse_dir_button.grid(row=0, column=2, padx=10, pady=10)
 
+# Langues sélectionnées
 ttk.Label(main_frame, text="Langue(s) sélectionnée(s) :").grid(row=1, column=0, padx=10, pady=10, sticky='e')
 
 english_var = tk.BooleanVar()
@@ -345,6 +380,7 @@ german_checkbutton.grid(row=1, column=1)
 spanish_checkbutton = ttk.Checkbutton(main_frame, text="Espagnol", variable=spanish_var)
 spanish_checkbutton.grid(row=1, column=1, sticky='e')
 
+# Prévenir les utilisateurs
 ttk.Label(main_frame, text="Prévenir les utilisateurs :").grid(row=2, column=0, padx=10, pady=10, sticky='e')
 
 notify_var = tk.StringVar()
@@ -352,10 +388,13 @@ notify_var.set("Oui")
 ttk.Radiobutton(main_frame, text="Oui", variable=notify_var, value="Oui").grid(row=2, column=1, sticky='w')
 ttk.Radiobutton(main_frame, text="Non", variable=notify_var, value="Non").grid(row=2, column=1, sticky='e')
 
+# Champ pour la clé API DeepL
 ttk.Label(main_frame, text="Clé API DeepL :").grid(row=3, column=0, padx=10, pady=10, sticky='e')
-api_key_entry = ttk.Entry(main_frame, width=50)
-api_key_entry.grid(row=3, column=1, padx=10, pady=10)
-api_key_entry.insert(0, "ex:XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX:fx")
+api_key_entry = ttk.Entry(main_frame, width=50, show='*')  # Texte caché par défaut
+api_key_entry.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+toggle_button = ttk.Button(main_frame, text='Afficher', command=toggle_api_key_visibility)
+toggle_button.grid(row=3, column=2, padx=10, pady=10, sticky='w')
+main_frame.grid_columnconfigure(1, weight=1)
 
 # Ajouter un champ pour le glossaire
 ttk.Label(main_frame, text="Glossaire (mot:traduction) :").grid(row=4, column=0, padx=10, pady=10, sticky='e')
