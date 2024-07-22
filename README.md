@@ -38,7 +38,7 @@ This InDesign Translation Tool is a Python application designed to translate IDM
 3. Select the IDML files you want to translate.
 4. Choose the target languages.
 5. (Optional) Enter a glossary in the format word:translation;word:translation.
-6 Click "Translate" to start the translation process.
+6. Click "Translate" to start the translation process.
 
 ## GUI Components
 
