@@ -149,13 +149,13 @@ def on_translate():
             return
 
         translator = deepl.Translator(api_key)
-        
+
         files = file_path_entry.get().split(';')
         if not files or files == ['']:
             messagebox.showwarning("Avertissement", "Veuillez sélectionner au moins un fichier à traduire.")
             enable_buttons()
             return
-        
+
         # Vérifier la validité de la clé API en effectuant une requête de test
         try:
             translator.get_usage()
@@ -168,12 +168,6 @@ def on_translate():
             enable_buttons()
             return
 
-        files = file_path_entry.get().split(';')
-        if not files or files == ['']:
-            messagebox.showwarning("Avertissement", "Veuillez sélectionner au moins un fichier à traduire.")
-            enable_buttons()
-            return
-
         selected_languages = []
         if english_var.get():
             selected_languages.append("EN-US")
@@ -181,12 +175,12 @@ def on_translate():
             selected_languages.append("DE")
         if spanish_var.get():
             selected_languages.append("ES")
-        
+
         if not selected_languages:
             messagebox.showwarning("Avertissement", "Veuillez sélectionner au moins une langue.")
             enable_buttons()
             return
-        
+
         glossary_text = glossary_entry.get()
         glossary_id = None
         if glossary_text:
@@ -194,7 +188,20 @@ def on_translate():
             glossary = {key.strip(): value.strip() for key, value in glossary_entries}
             glossary_id = translator.create_glossary("Custom Glossary", "FR", "EN-US", glossary)
 
-        total_files = sum([len([name for name in os.listdir(os.path.join(os.path.dirname(file), 'Temp', 'Stories')) if name.endswith('.xml')]) for file in files])
+        total_files = 0
+        for file in files:
+            temp_stories_path = os.path.join(os.path.dirname(file), 'Temp', 'Stories')
+            if os.path.exists(temp_stories_path):
+                total_files += len([name for name in os.listdir(temp_stories_path) if name.endswith('.xml')])
+            else:
+                messagebox.showwarning("Avertissement", f"Le répertoire 'Stories' n'existe pas pour le fichier {file}.")
+                continue
+
+        if total_files == 0:
+            messagebox.showwarning("Avertissement", "Aucun fichier XML trouvé dans les répertoires 'Stories'.")
+            enable_buttons()
+            return
+
         total_steps = len(selected_languages) * total_files
         step = 100 / total_steps
 
@@ -202,7 +209,7 @@ def on_translate():
         progress_bar.grid(row=9, columnspan=3, pady=20)
         progress_label.grid(row=8, columnspan=3, pady=5)
         stop_button.grid(row=11, columnspan=3, pady=5)
-        
+
         translated_files = []
         for file_path in files:
             if stop_translation:
@@ -231,7 +238,7 @@ def on_translate():
         progress_bar.grid_forget()
         progress_label.grid_forget()
         stop_button.grid_forget()
-        
+
         # Ouvrir l'explorateur de fichiers à l'emplacement des fichiers traduits
         if translated_files and not stop_translation:
             output_dir = os.path.dirname(translated_files[0])
