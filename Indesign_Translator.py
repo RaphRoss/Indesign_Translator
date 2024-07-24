@@ -1,10 +1,12 @@
 import subprocess
 import importlib
+import sys
 
 # Liste des modules nécessaires
 required_modules = [
     'deepl', 'tkinter', 'threading', 'datetime', 'os', 'xml.etree.ElementTree', 
     'zipfile', 're', 'tkinter.filedialog', 'tkinter.messagebox', 'tkinter.ttk'
+    , 'PIL', 'PIL.Image', 'PIL.ImageTk'
 ]
 
 # Vérifier et installer les modules manquants
@@ -15,7 +17,7 @@ def check_and_install_modules(modules):
             print(f"Le module '{module}' est déjà installé.")
         except ImportError:
             print(f"Le module '{module}' n'est pas installé. Installation en cours...")
-            subprocess.check_call(['pip', 'install', module])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", module])
             print(f"Le module '{module}' a été installé.")
 
 # Exécuter la vérification et l'installation
@@ -24,6 +26,7 @@ check_and_install_modules(required_modules)
 import deepl
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+from PIL import Image, ImageTk
 import threading
 import datetime
 import os
@@ -115,11 +118,12 @@ def create_idml_zip(source_file, target_lang, progress_bar, total_files, progres
     year = now.strftime("%Y")  # Année
     month = now.strftime("%B")  # Mois en toutes lettres
     day = now.strftime("%d")  # Jour
-    time = now.strftime("%Hh%M")  # Heure et minute
+    time = now.strftime("%Hh%Mm")  # Heure et minute
+    seconds = now.strftime("%Ss")  # Secondes
 
     output_dir = os.path.join(os.path.dirname(source_file), "Traduction", year, month, day)
     os.makedirs(output_dir, exist_ok=True)
-    output_file = f"{base_name}_{target_lang}_{time}.idml"
+    output_file = f"{base_name}_{target_lang}_{time}{seconds}.idml"
     output_path = os.path.join(output_dir, output_file)
 
     # Créer le chemin du dossier de sortie 
@@ -263,10 +267,10 @@ def on_stop():
 def toggle_api_key_visibility():
     if api_key_entry.cget('show') == '*':
         api_key_entry.config(show='')
-        toggle_button.config(text='Cacher')
+        toggle_button.config(image=hide_image)
     else:
         api_key_entry.config(show='*')
-        toggle_button.config(text='Afficher')
+        toggle_button.config(image=show_image)
 
 def disable_buttons():
     translate_button.config(state=tk.DISABLED)
@@ -277,6 +281,8 @@ def disable_buttons():
     english_checkbutton.config(state=tk.DISABLED)
     german_checkbutton.config(state=tk.DISABLED)
     spanish_checkbutton.config(state=tk.DISABLED)
+    notify_yes_button.config(state=tk.DISABLED)
+    notify_no_button.config(state=tk.DISABLED)
 
 def enable_buttons():
     translate_button.config(state=tk.NORMAL)
@@ -287,6 +293,8 @@ def enable_buttons():
     english_checkbutton.config(state=tk.NORMAL)
     german_checkbutton.config(state=tk.NORMAL)
     spanish_checkbutton.config(state=tk.NORMAL)
+    notify_yes_button.config(state=tk.NORMAL)
+    notify_no_button.config(state=tk.NORMAL)
 
 def browse_directory():
     dir_path = filedialog.askdirectory()
@@ -344,6 +352,42 @@ def is_valid_api_key(api_key):
     pattern = r'^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}:fx$'
     return bool(re.match(pattern, api_key))
 
+# Sauvegarder et charger la clé API DeepL
+def hide_file(filepath):
+    # Utilise la commande attrib pour masquer le fichier sur Windows
+    if os.name == 'nt':
+        subprocess.check_call(['attrib', '+H', filepath])
+        
+def save_api_key(api_key):
+    file_path = os.path.join(os.path.dirname(__file__), 'deepl_api_key.txt')
+    try:
+        with open(file_path, 'w') as key_file:
+            key_file.write(api_key)
+        hide_file(file_path)
+    except PermissionError as e:
+        messagebox.showerror("Erreur de permission", f"Erreur lors de l'enregistrement de la clé API : {str(e)}")
+
+def load_api_key():
+    file_path = os.path.join(os.path.dirname(__file__), 'deepl_api_key.txt')
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as key_file:
+            print("Chargement de la clé API enregistrée.")
+            return key_file.read()
+    else:
+        print("Aucune clé API enregistrée trouvée.")
+    return ''
+
+def on_save_key():
+    api_key = api_key_entry.get()
+    if os.path.exists(os.path.join(os.path.dirname(__file__), 'deepl_api_key.txt')):
+        os.remove(os.path.join(os.path.dirname(__file__), 'deepl_api_key.txt'))
+    if is_valid_api_key(api_key):
+        save_api_key(api_key)
+        messagebox.showinfo("Information", "La clé API a été sauvegardée.")
+    else:
+        messagebox.showwarning("Avertissement", "Veuillez saisir une clé API valide avant de sauvegarder.")
+
+
 # Initialisation de la fenêtre principale
 root = tk.Tk()
 root.title("Indesign Traduction")
@@ -360,7 +404,6 @@ style.configure("TEntry", padding=5)
 style.configure("TButton", font=("Arial", 10), padding=5)
 style.configure("TCheckbutton", font=("Arial", 10), padding=5)
 style.configure("TRadiobutton", font=("Arial", 10), padding=5)
-
 
 # Frame principale
 main_frame = ttk.Frame(root, padding="10 10 10 10")
@@ -392,16 +435,38 @@ ttk.Label(main_frame, text="Prévenir les utilisateurs :").grid(row=2, column=0,
 
 notify_var = tk.StringVar()
 notify_var.set("Oui")
-ttk.Radiobutton(main_frame, text="Oui", variable=notify_var, value="Oui").grid(row=2, column=1, sticky='w')
-ttk.Radiobutton(main_frame, text="Non", variable=notify_var, value="Non").grid(row=2, column=1, sticky='e')
+notify_yes_button = ttk.Radiobutton(main_frame, text="Oui", variable=notify_var, value="Oui")
+notify_yes_button.grid(row=2, column=1, sticky='w')
+notify_no_button = ttk.Radiobutton(main_frame, text="Non", variable=notify_var, value="Non")
+notify_no_button.grid(row=2, column=1, sticky='e')
+
+# Charger les images pour les boutons de visibilité de la clé API
+show_image_path = os.path.join(os.path.dirname(__file__), "img/show.png")
+hide_image_path = os.path.join(os.path.dirname(__file__), "img/hide.png")
+
+show_image = ImageTk.PhotoImage(Image.open(show_image_path))
+hide_image = ImageTk.PhotoImage(Image.open(hide_image_path))
+
+# Frame pour l'entrée et le bouton
+entry_frame = ttk.Frame(main_frame)
+entry_frame.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
 
 # Champ pour la clé API DeepL
 ttk.Label(main_frame, text="Clé API DeepL :").grid(row=3, column=0, padx=10, pady=10, sticky='e')
-api_key_entry = ttk.Entry(main_frame, width=50, show='*')  # Texte caché par défaut
-api_key_entry.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
-toggle_button = ttk.Button(main_frame, text='Afficher', command=toggle_api_key_visibility)
-toggle_button.grid(row=3, column=2, padx=10, pady=10, sticky='w')
+
+api_key_entry = ttk.Entry(entry_frame, width=40, show='*')  # Texte caché par défaut
+api_key_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+# Bouton pour basculer la visibilité de la clé API sans contour, à l'intérieur du champ
+toggle_button = tk.Button(entry_frame, image=show_image, command=toggle_api_key_visibility, bd=0, highlightthickness=0, relief='flat')
+toggle_button.pack(side=tk.RIGHT)
+
+api_key_entry.insert(0, load_api_key())
 main_frame.grid_columnconfigure(1, weight=1)
+
+# sauvegarder la clé API
+save_key_button = ttk.Button(main_frame, text="Sauvegarder la clé", command=on_save_key)
+save_key_button.grid(row=3, column=2, padx=10, pady=10)
 
 # Ajouter un champ pour le glossaire
 ttk.Label(main_frame, text="Glossaire (mot:traduction) :").grid(row=4, column=0, padx=10, pady=10, sticky='e')
