@@ -1,91 +1,107 @@
 # InDesign Translation Tool
 
-This InDesign Translation Tool is a Python application designed to translate IDML files using the DeepL API. The tool allows users to select multiple IDML files, specify target languages, and use custom glossaries for translation. The translations are performed in a threaded manner to keep the application responsive.
+This application is designed to help users translate InDesign IDML files using the DeepL API. It provides a graphical user interface built with `tkinter`, allowing users to select files, configure translation settings, and start the translation process.
 
-## Features
+## Table of Contents
+- [Project Overview](#project-overview)
+- [Dependencies](#dependencies)
+- [Setup](#setup)
+- [Usage](#usage)
+- [File Descriptions](#file-descriptions)
+- [License](#license)
 
-- Translate IDML files into multiple languages using DeepL API.
-- Support for custom glossaries to ensure accurate translation of specific terms.
-- Real-time progress updates and the ability to stop the translation process.
-- GUI-based file selection and settings configuration.
+## Project Overview
 
-## Requirements
+The InDesign Translation Tool allows you to:
+- Select IDML files for translation.
+- Choose languages for translation (English, German, Spanish).
+- Configure API key for DeepL and manage it securely.
+- Translate text in IDML files using the DeepL API and create translated IDML files.
 
-- Python 3.6 or higher.
-- DeepL API Key.
-- Required Python modules (automatically installed if missing):
-  - deepl
-  - tkinter
-  - threading
-  - datetime
-  - os
-  - xml.etree.ElementTree
-  - zipfile
-  - re
+## Dependencies
 
-## Installation
+This project requires the following Python packages:
+- `tkinter` (for the GUI)
+- `Pillow` (for image processing)
+- `deepl` (for translation)
+- `zipfile` (for handling IDML files)
 
-1. Clone the repository or download the source code.
-2. Ensure you have Python installed on your system.
-3. Install the required Python modules. The script checks for required modules and installs them if they are missing.
+Ensure these packages are installed by running the setup script or manually installing them.
+
+## Setup
+
+1. **Clone the repository:**
+
+    ```bash
+    git clone <repository-url>
+    cd <repository-directory>
+    ```
+
+2. **Install dependencies:**
+
+    Run the following command to install the required Python packages:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3. **Prepare the environment:**
+
+    Ensure you have a valid DeepL API key. The key will be used to authenticate translation requests.
+
+4. **Run the application:**
+
+    Execute the main script to start the application:
+
+    ```bash
+    python Main.py
+    ```
 
 ## Usage
 
-1. Run the script using Python:
-   ```bash
-   python Indesign_Translator.py
-2. Enter your DeepL API key.
-3. Select the IDML files you want to translate.
-4. Choose the target languages.
-5. (Optional) Enter a glossary in the format word:translation;word:translation.
-6. Click "Translate" to start the translation process.
+1. **Select Files:**
+   - Click "Browse Directory" to select a folder containing IDML files for translation.
+   - A dialog will allow you to choose which files to include.
 
-## GUI Components
+2. **Configure Translation:**
+   - Enter your DeepL API key and click "Save Key" to store it securely.
+   - Enter any glossary terms if needed (format: `word:translation`).
+   - Select the target languages for translation (English, German, Spanish).
+   - Choose whether to notify users upon completion.
 
-### Main Window
-- File Path: Select the directory or files containing the IDML files to be translated.
-- Target Languages: Choose the languages you want to translate the files into (English, German, Spanish).
-- DeepL API Key: Enter your DeepL API key. You can toggle the visibility of the key.
-- Glossary: Enter custom glossary entries to be used during translation.
-- Translate Button: Starts the translation process.
-- Stop Button: Stops the ongoing translation process.
-- Progress Bar and Label: Shows the current progress of the translation process.
+3. **Start Translation:**
+   - Click "Translate" to begin the translation process.
+   - Monitor progress through the progress bar and label.
+   - Click "Stop" to halt the translation process if needed.
 
-## Functions
+4. **Manage API Key:**
+   - Click the eye icon to toggle the visibility of the API key field.
 
-### `check_and_install_modules(modules)`
-Checks for required modules and installs any that are missing.
+## File Descriptions
 
-### `translate_stories(directory, target_langs, progress_bar, total_files, progress_label, root, translator, glossary_id)`
-Translates the content of the IDML stories to the specified target languages.
+### `Main.py`
 
-### `create_idml_zip(source_file, target_lang, progress_bar, total_files, progress_label, root, translator, glossary_id)`
-Creates a translated IDML file from the source file and compresses it into a ZIP archive.
+The main script for the application. It handles:
+- GUI setup using `tkinter`.
+- File selection and directory browsing.
+- API key management.
+- Translation process and progress reporting.
 
-### `on_translate()`
-Handles the translation process, including user input validation and starting the translation thread.
+### `Translations.py`
 
-### `on_stop()`
-Stops the ongoing translation process and cleans up temporary files.
+Contains translation data and helper functions for loading translation texts:
+- `translations` dictionary: Contains translations for different languages.
+- `load_translation_text()` function: Loads long text messages from files.
 
-### `toggle_api_key_visibility()`
-Toggles the visibility of the DeepL API key input.
+### `Utils.py`
 
-### `browse_directory()`
-Allows users to select a directory containing IDML files for translation.
-
-### `is_valid_api_key(api_key)`
-Validates the DeepL API key format.
-
-## Error Handling
-The application handles various errors such as invalid API keys, file extraction errors, XML parsing errors, and more. Users are notified through message boxes.
-
-## Contribution
-Contributions are welcome! Please fork the repository and submit a pull request.
+Utility functions for the application:
+- `check_and_install_modules()`: Checks and installs required Python modules.
+- `is_valid_api_key(api_key)`: Validates the format of the DeepL API key.
+- `hide_file(filepath)`: Hides the API key file for security.
+- `save_api_key(api_key)`: Saves and hides the API key.
+- `load_api_key()`: Loads the saved API key.
 
 ## License
-This project is licensed under the MIT License.
 
-## Acknowledgments
-Thanks to DeepL for their powerful translation API.
-The tkinter library for providing the GUI framework.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
