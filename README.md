@@ -39,11 +39,7 @@ Ensure these packages are installed by running the setup script or manually inst
 
 2. **Install dependencies:**
 
-    Run the following command to install the required Python packages:
-
-    ```bash
-    pip install -r requirements.txt
-    ```
+    Just run the script to install the required Python packages:
 
 3. **Prepare the environment:**
 
