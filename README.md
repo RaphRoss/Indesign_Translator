@@ -102,6 +102,7 @@ Utility functions for the application:
 - Send Ootlook email with "notify user"
 - Glossary
 - Source Language managing
+- Bug with the save key button with the .exe version
 
 ## License
 
