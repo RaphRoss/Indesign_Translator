@@ -98,6 +98,11 @@ Utility functions for the application:
 - `save_api_key(api_key)`: Saves and hides the API key.
 - `load_api_key()`: Loads the saved API key.
 
+## To Do
+- Send Ootlook email with "notify user"
+- Glossary
+- Source Language managing
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
