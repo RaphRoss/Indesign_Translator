@@ -33,7 +33,7 @@ Ensure these packages are installed by running the setup script or manually inst
 1. **Clone the repository:**
 
     ```bash
-    git clone <repository-url>
+    git clone git@github.com:RaphRoss/Indesign_Translator.git
     cd <repository-directory>
     ```
 
