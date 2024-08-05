@@ -3,6 +3,8 @@ import importlib
 import sys
 import os
 import re
+import xml.etree.ElementTree as ET
+from deepl import Translator
 
 # Liste des modules nécessaires
 required_modules = [

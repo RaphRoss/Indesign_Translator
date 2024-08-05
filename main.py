@@ -1,3 +1,8 @@
+from translations import translations, load_translation_text
+from utils import check_and_install_modules, is_valid_api_key, hide_file, load_api_key, save_api_key
+
+check_and_install_modules()
+
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk
@@ -8,14 +13,12 @@ import re
 import zipfile
 from zipfile import ZipFile
 from deepl import Translator
-import xml.etree.ElementTree as ET  # Ajout de cette ligne
-
-from translations import translations, load_translation_text
-from utils import check_and_install_modules, is_valid_api_key, hide_file, load_api_key, save_api_key
+import xml.etree.ElementTree as ET
+import shutil  # Added for removing directories and files
 
 # Initial setup
-check_and_install_modules()
 current_language = 'fr'
+source_language = 'FR'
 stop_translation = False
 current_temp_dir = None
 output_path = None
@@ -31,17 +34,20 @@ def translate_ui():
     browse_dir_button.config(text=lang['browse_dir'])
     langs_selected_label.config(text=lang['langs_selected'])
     notify_users_label.config(text=lang['notify_users'])
-    notify_yes_button.config(text=lang['notify_yes'])
-    notify_no_button.config(text=lang['notify_no'])
+    notify_yes_button.config(text=lang['notify_yes'], state=tk.DISABLED)
+    notify_no_button.config(text=lang['notify_no'], state=tk.DISABLED)
     api_key_label.config(text=lang['api_key'])
     save_key_button.config(text=lang['save_key'])
-    glossary_label.config(text=lang['glossary'])
+    glossary_label.config(text=lang['glossary'], state=tk.DISABLED)
     translate_button.config(text=lang['translate'])
     stop_button.config(text=lang['stop'])
     progress_label.config(text=lang['progress'].format(percentage=0))
     english_checkbutton.config(text=lang['english'])
     german_checkbutton.config(text=lang['german'])
     spanish_checkbutton.config(text=lang['spanish'])
+    french_checkbutton.config(text=lang['french'])
+    source_lang_label.config(text=lang['source_lang'])
+    source_lang_menu.config(values=lang['languages'])
 
 def show_message(title_key, message_key, **kwargs):
     title = translations[current_language][title_key]
@@ -70,14 +76,14 @@ def on_en_click():
 
 def disable_buttons():
     for widget in (translate_button, browse_dir_button, api_key_entry, file_path_entry, glossary_entry,
-                   english_checkbutton, german_checkbutton, spanish_checkbutton, notify_yes_button,
-                   notify_no_button, toggle_button, save_key_button, fr, en):
+                   english_checkbutton, german_checkbutton, spanish_checkbutton, french_checkbutton,
+                   notify_yes_button, notify_no_button, toggle_button, save_key_button, fr, en, source_lang_menu):
         widget.config(state=tk.DISABLED)
 
 def enable_buttons():
-    for widget in (translate_button, browse_dir_button, api_key_entry, file_path_entry, glossary_entry,
-                   english_checkbutton, german_checkbutton, spanish_checkbutton, notify_yes_button,
-                   notify_no_button, toggle_button, save_key_button, fr, en):
+    for widget in (translate_button, browse_dir_button, api_key_entry, file_path_entry,
+                   english_checkbutton, german_checkbutton, spanish_checkbutton,
+                   french_checkbutton, toggle_button, save_key_button, fr, en, source_lang_menu):
         widget.config(state=tk.NORMAL)
 
 def toggle_api_key_visibility():
@@ -147,18 +153,30 @@ def on_save_key():
         show_warning('warning', 'invalid_api_key')
 
 def on_stop():
-    global stop_translation, current_temp_dir
+    global stop_translation, current_temp_dir, output_path
     stop_translation = True
     if current_temp_dir and os.path.exists(current_temp_dir):
         try:
-            os.rmdir(current_temp_dir)
-            os.remove(output_path)
+            shutil.rmtree(current_temp_dir)
         except OSError as e:
             print(f"Erreur lors de la suppression du répertoire temporaire {current_temp_dir}: {str(e)}")
+    if output_path and os.path.exists(output_path):
+        try:
+            os.remove(output_path)
+        except OSError as e:
+            print(f"Erreur lors de la suppression du fichier de sortie {output_path}: {str(e)}")
+        try:
+            output_dir = os.path.dirname(output_path)
+            if os.path.exists(output_dir) and not os.listdir(output_dir):
+                shutil.rmtree(output_dir)
+        except OSError as e:
+            print(f"Erreur lors de la suppression du répertoire de sortie {output_dir}: {str(e)}")
 
-# Main application logic
+def confirm_unzip():
+    return messagebox.askyesno(translations[current_language]['confirm'], translations[current_language]['confirm_unzip'])
+
 def on_translate():
-    global stop_translation
+    global stop_translation, source_language
     stop_translation = False
     
     def run_translation():
@@ -170,6 +188,8 @@ def on_translate():
 
         translator = Translator(api_key)
 
+        source_lang = source_lang_var.get()
+        source_language = source_lang
         files = file_path_entry.get().split(';')
         if not files or files == ['']:
             show_warning('warning', 'warning_no_files')
@@ -190,11 +210,19 @@ def on_translate():
             selected_languages.append("DE")
         if spanish_var.get():
             selected_languages.append("ES")
+        if french_var.get():
+            selected_languages.append("FR")
 
         if not selected_languages:
             show_warning('warning', 'warning_no_lang')
             enable_buttons()
             return
+
+        for lang in selected_languages:
+            if lang.split('-')[0].upper() == source_language:
+                show_warning('warning', 'same_language_warning')
+                enable_buttons()
+                return
 
         glossary_text = glossary_entry.get()
         glossary_id = None
@@ -206,11 +234,26 @@ def on_translate():
         total_files = 0
         for file in files:
             temp_stories_path = os.path.join(os.path.dirname(file), 'Temp', 'Stories')
-            if os.path.exists(temp_stories_path):
-                total_files += len([name for name in os.listdir(temp_stories_path) if name.endswith('.xml')])
+            if not os.path.exists(temp_stories_path):
+                if confirm_unzip():
+                    try:
+                        with ZipFile(file, 'r') as zip_ref:
+                            zip_ref.extractall(os.path.join(os.path.dirname(file), 'Temp'))
+                        total_files += len([name for name in os.listdir(temp_stories_path) if name.endswith('.xml')])
+                    except zipfile.BadZipFile as e:
+                        show_error('error', 'error_extraction', file=file, error=str(e))
+                        continue
+                    except FileNotFoundError as e:
+                        show_error('error', 'file_not_found', file=file)
+                        continue
+                    except PermissionError as e:
+                        show_error('error', 'permission_error', file=file)
+                        continue
+                else:
+                    enable_buttons()
+                    return
             else:
-                show_warning('warning', 'warning_no_stories_dir', file=file)
-                continue
+                total_files += len([name for name in os.listdir(temp_stories_path) if name.endswith('.xml')])
 
         if total_files == 0:
             show_warning('warning', 'warning_no_xml')
@@ -220,9 +263,9 @@ def on_translate():
         total_steps = len(selected_languages) * total_files
 
         progress_bar['maximum'] = 100
-        progress_bar.grid(row=9, columnspan=3, pady=20)
-        progress_label.grid(row=8, columnspan=3, pady=5)
-        stop_button.grid(row=11, columnspan=3, pady=5)
+        progress_bar.grid(row=10, columnspan=3, pady=20)
+        progress_label.grid(row=9, columnspan=3, pady=5)
+        stop_button.grid(row=12, columnspan=3, pady=5)
 
         translated_files = 0
         for file_path in files:
@@ -290,12 +333,13 @@ def translate_stories(directory, target_langs, progress_bar, total_files, progre
                 for target_lang in target_langs:
                     translated_text = translator.translate_text(
                         original_text, 
+                        source_lang=source_language,  # Use the selected source language
                         target_lang=target_lang, 
                         preserve_formatting=True,
                         glossary=glossary_id
                     )
                     detected_language = translated_text.detected_source_lang
-                    if detected_language == 'FR':
+                    if detected_language.upper() == source_language:
                         elem.text = translated_text.text
                         print(translations[current_language]['text_translated'].format(text=elem.text))
                     else:
@@ -316,7 +360,7 @@ def translate_stories(directory, target_langs, progress_bar, total_files, progre
     return translated_files
 
 def create_idml_zip(source_file, target_lang, progress_bar, total_files, progress_label, root, translator, glossary_id=None, translated_files=0):
-    global current_temp_dir
+    global current_temp_dir, output_path
     temp_file = os.path.join(os.path.dirname(source_file), 'Temp')
     current_temp_dir = temp_file
 
@@ -338,13 +382,15 @@ def create_idml_zip(source_file, target_lang, progress_bar, total_files, progres
     seconds = now.strftime("%Ss")
 
     output_dir = os.path.join(os.path.dirname(source_file), "Traduction", year, month, day)
-    os.makedirs(output_dir, exist_ok=True)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     output_file = f"{base_name}_{target_lang}_{time}{seconds}.idml"
     output_path = os.path.join(output_dir, output_file)
 
     with zipfile.ZipFile(output_path, 'w', compression=zipfile.ZIP_STORED) as zf:
         mimetype_path = os.path.join(temp_file, 'mimetype')
-        zf.write(mimetype_path, arcname='mimetype')
+        if os.path.exists(mimetype_path):
+            zf.write(mimetype_path, arcname='mimetype')
 
     with zipfile.ZipFile(output_path, 'a', compression=zipfile.ZIP_DEFLATED) as zf:
         for root_dir, _, files in os.walk(temp_file):
@@ -352,7 +398,8 @@ def create_idml_zip(source_file, target_lang, progress_bar, total_files, progres
                 if file != 'mimetype':
                     file_path = os.path.join(root_dir, file)
                     arcname = os.path.relpath(file_path, temp_file)
-                    zf.write(file_path, arcname=arcname)
+                    if os.path.exists(file_path):
+                        zf.write(file_path, arcname=arcname)
     
     return output_path, translated_files
 
@@ -380,28 +427,38 @@ file_path_entry.grid(row=1, column=1, padx=10, pady=10)
 browse_dir_button = ttk.Button(main_frame, text=translations[current_language]['browse_dir'], command=browse_directory)
 browse_dir_button.grid(row=1, column=2, padx=10, pady=10)
 
+source_lang_label = ttk.Label(main_frame, text=translations[current_language]['source_lang'])
+source_lang_label.grid(row=2, column=0, padx=10, pady=10, sticky='e')
+source_lang_var = tk.StringVar()
+source_lang_var.set("FR")
+source_lang_menu = ttk.Combobox(main_frame, textvariable=source_lang_var, values=translations[current_language]['languages'], state='readonly')
+source_lang_menu.grid(row=2, column=1, padx=10, pady=10)
+
 langs_selected_label = ttk.Label(main_frame, text=translations[current_language]['langs_selected'])
-langs_selected_label.grid(row=2, column=0, padx=10, pady=10, sticky='e')
+langs_selected_label.grid(row=3, column=0, padx=10, pady=10, sticky='e')
 
 english_var = tk.BooleanVar()
 german_var = tk.BooleanVar()
 spanish_var = tk.BooleanVar()
+french_var = tk.BooleanVar()
 
 english_checkbutton = ttk.Checkbutton(main_frame, text=translations[current_language]['english'], variable=english_var)
-english_checkbutton.grid(row=2, column=1, sticky='w')
+english_checkbutton.grid(row=3, column=1, sticky='w')
 german_checkbutton = ttk.Checkbutton(main_frame, text=translations[current_language]['german'], variable=german_var)
-german_checkbutton.grid(row=2, column=1)
+german_checkbutton.grid(row=3, column=1)
 spanish_checkbutton = ttk.Checkbutton(main_frame, text=translations[current_language]['spanish'], variable=spanish_var)
-spanish_checkbutton.grid(row=2, column=1, sticky='e')
+spanish_checkbutton.grid(row=3, column=1, sticky='e')
+french_checkbutton = ttk.Checkbutton(main_frame, text=translations[current_language]['french'], variable=french_var)
+french_checkbutton.grid(row=3, column=2)
 
 notify_users_label = ttk.Label(main_frame, text=translations[current_language]['notify_users'])
-notify_users_label.grid(row=3, column=0, padx=10, pady=10, sticky='e')
+notify_users_label.grid(row=4, column=0, padx=10, pady=10, sticky='e')
 notify_var = tk.StringVar()
 notify_var.set("Oui")
-notify_yes_button = ttk.Radiobutton(main_frame, text=translations[current_language]['notify_yes'], variable=notify_var, value="Oui")
-notify_yes_button.grid(row=3, column=1, sticky='w')
-notify_no_button = ttk.Radiobutton(main_frame, text=translations[current_language]['notify_no'], variable=notify_var, value="Non")
-notify_no_button.grid(row=3, column=1, sticky='e')
+notify_yes_button = ttk.Radiobutton(main_frame, text=translations[current_language]['notify_yes'], variable=notify_var, value="Oui", state=tk.DISABLED)
+notify_yes_button.grid(row=4, column=1, sticky='w')
+notify_no_button = ttk.Radiobutton(main_frame, text=translations[current_language]['notify_no'], variable=notify_var, value="Non", state=tk.DISABLED)
+notify_no_button.grid(row=4, column=1, sticky='e')
 
 show_image_path = os.path.join(os.path.dirname(__file__), "img/show.png")
 hide_image_path = os.path.join(os.path.dirname(__file__), "img/hide.png")
@@ -409,10 +466,10 @@ show_image = ImageTk.PhotoImage(Image.open(show_image_path))
 hide_image = ImageTk.PhotoImage(Image.open(hide_image_path))
 
 entry_frame = ttk.Frame(main_frame)
-entry_frame.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
+entry_frame.grid(row=5, column=1, padx=10, pady=10, sticky='ew')
 
 api_key_label = ttk.Label(main_frame, text=translations[current_language]['api_key'])
-api_key_label.grid(row=4, column=0, padx=10, pady=10, sticky='e')
+api_key_label.grid(row=5, column=0, padx=10, pady=10, sticky='e')
 api_key_entry = ttk.Entry(entry_frame, width=40, show='*')
 api_key_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
 toggle_button = tk.Button(entry_frame, image=show_image, command=toggle_api_key_visibility, bd=0, highlightthickness=0, relief='flat')
@@ -421,15 +478,15 @@ api_key_entry.insert(0, load_api_key())
 main_frame.grid_columnconfigure(1, weight=1)
 
 save_key_button = ttk.Button(main_frame, text=translations[current_language]['save_key'], command=on_save_key)
-save_key_button.grid(row=4, column=2, padx=10, pady=10)
+save_key_button.grid(row=5, column=2, padx=10, pady=10)
 
 glossary_label = ttk.Label(main_frame, text=translations[current_language]['glossary'])
-glossary_label.grid(row=5, column=0, padx=10, pady=10, sticky='e')
-glossary_entry = ttk.Entry(main_frame, width=50)
-glossary_entry.grid(row=5, column=1, padx=10, pady=10)
+glossary_label.grid(row=6, column=0, padx=10, pady=10, sticky='e')
+glossary_entry = ttk.Entry(main_frame, width=50, state=tk.DISABLED)
+glossary_entry.grid(row=6, column=1, padx=10, pady=10)
 
 translate_button = ttk.Button(main_frame, text=translations[current_language]['translate'], command=on_translate)
-translate_button.grid(row=6, columnspan=3, pady=20)
+translate_button.grid(row=7, columnspan=3, pady=20)
 
 fr_image_path = os.path.join(os.path.dirname(__file__), "img/fr.png")
 en_image_path = os.path.join(os.path.dirname(__file__), "img/USA.png")
@@ -450,15 +507,15 @@ en = tk.Button(button_frame, image=en_image, command=on_en_click, bd=0, highligh
 en.pack(side=tk.LEFT, padx=(1, 0))
 
 progress_label = ttk.Label(main_frame, text=translations[current_language]['progress'].format(percentage=0))
-progress_label.grid(row=8, columnspan=3, pady=5)
+progress_label.grid(row=9, columnspan=3, pady=5)
 progress_label.grid_forget()
 
 progress_bar = ttk.Progressbar(main_frame, orient='horizontal', length=300, mode='determinate')
-progress_bar.grid(row=9, columnspan=3, pady=20)
+progress_bar.grid(row=10, columnspan=3, pady=20)
 progress_bar.grid_forget()
 
 stop_button = ttk.Button(main_frame, text=translations[current_language]['stop'], command=on_stop)
-stop_button.grid(row=11, columnspan=3, pady=5)
+stop_button.grid(row=12, columnspan=3, pady=5)
 stop_button.grid_forget()
 
 root.mainloop()
