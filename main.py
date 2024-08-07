@@ -1,20 +1,21 @@
 from translations import translations, load_translation_text
-from utils import check_and_install_modules, is_valid_api_key, hide_file, load_api_key, save_api_key
+from utils import check_and_install_modules, is_valid_api_key, load_api_key, save_api_key
 
+# Vérification et installation des modules requis
 check_and_install_modules()
 
+# Importation des modules après vérification et installation
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk
 import threading
 import datetime
 import os
-import re
 import zipfile
 from zipfile import ZipFile
 from deepl import Translator
 import xml.etree.ElementTree as ET
-import shutil  # Added for removing directories and files
+import shutil
 
 # Initial setup
 current_language = 'fr'
