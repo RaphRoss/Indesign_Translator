@@ -8,7 +8,8 @@ import platform
 
 # Liste des modules nécessaires (exclure tkinter car il est intégré)
 required_modules = [
-    'deepl', 'PIL'
+    'deepl', 'PIL', 'tkinter', 'requests', 'xml.etree.ElementTree', 'platform',
+    'os', 're', 'subprocess', 'importlib', 'sys', 'json', 'io', 'time', 'datetime'
 ]
 
 def is_frozen():

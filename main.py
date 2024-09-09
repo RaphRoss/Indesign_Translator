@@ -23,6 +23,7 @@ source_language = 'FR'
 stop_translation = False
 current_temp_dir = None
 output_path = None
+temp_dirs = []  # Liste pour stocker les chemins des dossiers Temp créés
 
 # Load long messages
 long_messages = load_translation_text()
@@ -176,9 +177,20 @@ def on_stop():
 def confirm_unzip():
     return messagebox.askyesno(translations[current_language]['confirm'], translations[current_language]['confirm_unzip'])
 
+def delete_temp_dirs():
+    global temp_dirs
+    for temp_dir in temp_dirs:
+        if os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+                print(f"Dossier temporaire {temp_dir} supprimé avec succès.")
+            except OSError as e:
+                print(f"Erreur lors de la suppression du dossier temporaire {temp_dir}: {str(e)}")
+
 def on_translate():
-    global stop_translation, source_language
+    global stop_translation, source_language, temp_dirs, current_temp_dir, output_path
     stop_translation = False
+    temp_dirs = []  # Réinitialisation de la liste des dossiers temporaires
     
     def run_translation():
         api_key = api_key_entry.get()
@@ -300,6 +312,9 @@ def on_translate():
             output_dir = os.path.dirname(output_path)
             os.startfile(output_dir)
 
+        # Supprimer les dossiers Temp créés
+        delete_temp_dirs()
+
         enable_buttons()
 
     disable_buttons()
@@ -352,7 +367,8 @@ def translate_stories(directory, target_langs, progress_bar, total_files, progre
             show_error('error', 'error_writing', file=file_path, error=str(e))
 
         translated_files += 1
-        percentage = int(translated_files / total_files * 100)
+        # Correction pour ne pas dépasser 100%
+        percentage = min(int(translated_files / total_files * 100), 100)
 
         progress_bar['value'] = percentage
         progress_label.config(text=translations[current_language]['progress'].format(percentage=percentage))
@@ -361,9 +377,12 @@ def translate_stories(directory, target_langs, progress_bar, total_files, progre
     return translated_files
 
 def create_idml_zip(source_file, target_lang, progress_bar, total_files, progress_label, root, translator, glossary_id=None, translated_files=0):
-    global current_temp_dir, output_path
+    global current_temp_dir, output_path, temp_dirs  # Ajoutez temp_dirs ici
     temp_file = os.path.join(os.path.dirname(source_file), 'Temp')
     current_temp_dir = temp_file
+
+    # Ajout du dossier Temp à la liste des dossiers temporaires
+    temp_dirs.append(temp_file)
 
     try:
         with ZipFile(source_file, 'r') as zip_ref:
@@ -374,6 +393,7 @@ def create_idml_zip(source_file, target_lang, progress_bar, total_files, progres
     
     translated_files = translate_stories(temp_file, [target_lang], progress_bar, total_files, progress_label, root, translator, glossary_id, translated_files)
 
+    # Création du fichier IDML traduit
     base_name = os.path.splitext(os.path.basename(source_file))[0]
     now = datetime.datetime.now()
     year = now.strftime("%Y")
@@ -403,6 +423,7 @@ def create_idml_zip(source_file, target_lang, progress_bar, total_files, progres
                         zf.write(file_path, arcname=arcname)
     
     return output_path, translated_files
+
 
 # Main GUI setup
 root = tk.Tk()
