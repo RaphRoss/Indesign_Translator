@@ -157,9 +157,6 @@ Utility functions for the application:
 
 ## To Do
 - Send Outlook email with "notify user"
-- Improve glossary management.
-- Manage source language dynamically.
-- Fix the save key button bug in the `.exe` version.
 
 ## License
 
