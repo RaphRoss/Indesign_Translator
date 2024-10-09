@@ -16,6 +16,8 @@ from zipfile import ZipFile
 from deepl import Translator
 import xml.etree.ElementTree as ET
 import shutil
+import requests
+import pandas as pd
 
 # Initial setup
 current_language = 'fr'
@@ -50,6 +52,7 @@ def translate_ui():
     french_checkbutton.config(text=lang['french'])
     source_lang_label.config(text=lang['source_lang'])
     source_lang_menu.config(values=lang['languages'])
+    glossary_button.config(text=lang['browse_glossary'])
 
 def show_message(title_key, message_key, **kwargs):
     title = translations[current_language][title_key]
@@ -77,15 +80,17 @@ def on_en_click():
     translate_ui()
 
 def disable_buttons():
-    for widget in (translate_button, browse_dir_button, api_key_entry, file_path_entry, glossary_entry,
+    for widget in (translate_button, browse_dir_button, api_key_entry, file_path_entry,
                    english_checkbutton, german_checkbutton, spanish_checkbutton, french_checkbutton,
-                   notify_yes_button, notify_no_button, toggle_button, save_key_button, fr, en, source_lang_menu):
+                   notify_yes_button, notify_no_button, toggle_button, save_key_button, fr, en, source_lang_menu,
+                   glossary_button):
         widget.config(state=tk.DISABLED)
 
 def enable_buttons():
     for widget in (translate_button, browse_dir_button, api_key_entry, file_path_entry,
                    english_checkbutton, german_checkbutton, spanish_checkbutton,
-                   french_checkbutton, toggle_button, save_key_button, fr, en, source_lang_menu):
+                   french_checkbutton, toggle_button, save_key_button, fr, en, source_lang_menu,
+                   glossary_button):
         widget.config(state=tk.NORMAL)
 
 def toggle_api_key_visibility():
@@ -95,6 +100,90 @@ def toggle_api_key_visibility():
     else:
         api_key_entry.config(show='*')
         toggle_button.config(image=show_image)
+
+def on_glossary_select():
+    glossary_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx;*.xls")])
+    if glossary_path:
+        translate_button.config(state=tk.NORMAL)
+        glossary_preview.delete(0, tk.END)
+        global glossary_file_path
+        glossary_file_path = glossary_path  # Stocker le chemin complet du fichier Excel
+        glossary_preview.insert(tk.END, os.path.basename(glossary_path))
+        if glossary_file_path:
+            show_message('info', 'glossary_loaded')
+
+def load_glossary(glossary_path):
+    try:
+        # Débogage : Impression du chemin du fichier glossaire
+        print(f"Chemin du fichier glossaire : {glossary_path}")
+
+        # Charger le fichier Excel
+        df = pd.read_excel(glossary_path)
+        print("Fichier Excel chargé avec succès")
+
+        # Nettoyage des colonnes pour enlever d'éventuels espaces avant ou après les noms
+        df.columns = df.columns.str.strip()
+
+        # Vérification de la présence des colonnes 'Source' et 'Target'
+        if 'Source' not in df.columns or 'Target' not in df.columns:
+            raise ValueError("Les colonnes 'Source' et 'Target' doivent être présentes dans le fichier Excel.")
+        print("Colonnes Source et Target trouvées")
+
+        # Supprimer les lignes où l'une des colonnes est vide
+        df = df.dropna(subset=['Source', 'Target'])
+
+        # Extraction des colonnes et création du glossaire
+        source_words = df["Source"].tolist()  # Liste des mots sources
+        target_words = df["Target"].tolist()  # Liste des mots cibles
+
+        # Vérification : Assurer que les deux listes ont la même longueur
+        if len(source_words) != len(target_words):
+            raise ValueError("Les colonnes Source et Target ne correspondent pas en longueur.")
+
+        # Débogage : Impression des listes de mots source et cible
+        print(f"Mots source : {source_words}")
+        print(f"Mots cible : {target_words}")
+
+        # Création du dictionnaire du glossaire
+        glossary_dict = dict(zip(source_words, target_words))
+
+        # Vérification : Assurer que glossary_dict est bien un dictionnaire
+        if not isinstance(glossary_dict, dict):
+            raise ValueError("Erreur lors de la création du glossaire. Le glossaire n'est pas au format attendu.")
+        
+        # Debugging: Vérifie que glossary_dict est un dictionnaire
+        print(f"Type de glossary_dict : {type(glossary_dict)}")
+        print(f"Contenu de glossary_dict : {glossary_dict}")
+
+        return glossary_dict
+
+    except Exception as e:
+        show_error('error', 'error_loading_glossary', error=str(e))
+        print(f"Erreur lors du chargement du glossaire : {str(e)}")
+        return None
+    
+def create_deepl_glossary(translator, glossary_name, source_lang, target_lang, glossary_dict):
+    try:
+        # Vérifiez que glossary_dict est bien un dictionnaire
+        if not isinstance(glossary_dict, dict):
+            raise ValueError(f"Le glossaire doit être un dictionnaire, mais un {type(glossary_dict).__name__} a été trouvé.")
+
+        # Débogage : Impression du dictionnaire avant conversion en liste d'entrées
+        print(f"Glossaire reçu pour la création : {glossary_dict}")
+        
+        # Convertir le glossaire en liste de paires
+        glossary_entries = {src: tgt for src, tgt in glossary_dict.items()}
+        print(f"Entrées de glossaire pour Deepl : {glossary_entries}")
+
+        # Créer le glossaire dans DeepL
+        glossary = translator.create_glossary(name=glossary_name, source_lang=source_lang, target_lang=target_lang, entries=glossary_entries)
+        print(f"Glossaire créé avec succès, ID : {glossary.glossary_id}")
+
+        return glossary.glossary_id  # Renvoie l'ID du glossaire créé
+    except Exception as e:
+        show_error('error', 'error_creating_glossary', error=str(e))
+        print(f"Erreur lors de la création du glossaire : {str(e)}")
+        return None
 
 def browse_directory():
     dir_path = filedialog.askdirectory(title=translations[current_language]['file_explorer_title'])
@@ -237,12 +326,24 @@ def on_translate():
                 enable_buttons()
                 return
 
-        glossary_text = glossary_entry.get()
-        glossary_id = None
-        if glossary_text:
-            glossary_entries = [line.split(':') for line in glossary_text.split(';') if ':' in line]
-            glossary = {key.strip(): value.strip() for key, value in glossary_entries}
-            glossary_id = translator.create_glossary("Custom Glossary", "FR", "EN-US", glossary)
+        # Charger le glossaire depuis le fichier Excel sélectionné (optionnel)
+        if glossary_preview.size() > 0:  # Vérifier qu'un fichier est sélectionné
+            glossary_dict = load_glossary(glossary_file_path)  # Utiliser le chemin complet du fichier pour charger le glossaire
+        else:
+            glossary_dict = None
+
+        if glossary_dict:
+            if isinstance(glossary_dict, dict):
+                print(f"Glossaire chargé et prêt pour la création : {glossary_dict}")
+                glossary_id = create_deepl_glossary(translator, "MonGlossaire", source_language, "EN-US", glossary_dict)
+            else:
+                print(f"Erreur : glossary_dict n'est pas un dictionnaire, mais un {type(glossary_dict).__name__}")
+                enable_buttons()
+                return
+        else:
+            glossary_id = None  # Aucun glossaire utilisé si non sélectionné
+            print("Aucun glossaire sélectionné, la traduction se lance sans glossaire.")
+
 
         total_files = 0
         for file in files:
@@ -341,30 +442,44 @@ def translate_stories(directory, target_langs, progress_bar, total_files, progre
             show_error('error', 'error_parsing', file=file_path, error=str(e))
             continue
         
+        # Parcourir chaque élément XML et traduire le texte
         for elem in xml_root.iter():
             if stop_translation:
                 break
             if 'Content' in elem.tag and elem.text:
                 original_text = elem.text
                 for target_lang in target_langs:
-                    translated_text = translator.translate_text(
-                        original_text, 
-                        source_lang=source_language,  # Use the selected source language
-                        target_lang=target_lang, 
-                        preserve_formatting=True,
-                        glossary=glossary_id
-                    )
-                    detected_language = translated_text.detected_source_lang
-                    if detected_language.upper() == source_language:
-                        elem.text = translated_text.text
-                        print(translations[current_language]['text_translated'].format(text=elem.text))
-                    else:
-                        print(translations[current_language]['file_already_translated'].format(language=detected_language, text=original_text))
-        
+                    try:
+                        # Débogage : Impression du texte original et des paramètres de traduction
+                        print(f"Texte original : {original_text}")
+                        print(f"Langue source : {source_language}, Langue cible : {target_lang}")
+                        print(f"Glossaire utilisé : {glossary_id}")
+
+                        # Traduire le texte avec l'API Deepl et utiliser le glossaire
+                        translated_text = translator.translate_text(
+                            original_text, 
+                            source_lang=source_language,
+                            target_lang=target_lang, 
+                            preserve_formatting=True,
+                            glossary=glossary_id  # Utilisation du glossaire
+                        )
+                        detected_language = translated_text.detected_source_lang
+                        if detected_language.upper() == source_language:
+                            elem.text = translated_text.text
+                            print(f"Texte traduit : {elem.text}")
+                        else:
+                            print(f"Fichier déjà traduit en {detected_language}, texte original : {original_text}")
+                    except Exception as e:
+                        show_error('error', 'error_translation', error=str(e))
+                        print(f"Erreur lors de la traduction : {str(e)}")
+                        continue
+
         try:
+            # Sauvegarder les fichiers XML modifiés
             tree.write(file_path, encoding='UTF-8', xml_declaration=True)
         except IOError as e:
             show_error('error', 'error_writing', file=file_path, error=str(e))
+            print(f"Erreur lors de la sauvegarde du fichier : {str(e)}")
 
         translated_files += 1
         # Correction pour ne pas dépasser 100%
@@ -444,7 +559,7 @@ main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
 dir_path_label = ttk.Label(main_frame, text=translations[current_language]['dir_path'])
 dir_path_label.grid(row=1, column=0, padx=10, pady=10, sticky='e')
-file_path_entry = ttk.Entry(main_frame, width=50)
+file_path_entry = ttk.Entry(main_frame, width=60)
 file_path_entry.grid(row=1, column=1, padx=10, pady=10)
 browse_dir_button = ttk.Button(main_frame, text=translations[current_language]['browse_dir'], command=browse_directory)
 browse_dir_button.grid(row=1, column=2, padx=10, pady=10)
@@ -504,8 +619,10 @@ save_key_button.grid(row=5, column=2, padx=10, pady=10)
 
 glossary_label = ttk.Label(main_frame, text=translations[current_language]['glossary'])
 glossary_label.grid(row=6, column=0, padx=10, pady=10, sticky='e')
-glossary_entry = ttk.Entry(main_frame, width=50, state=tk.DISABLED)
-glossary_entry.grid(row=6, column=1, padx=10, pady=10)
+glossary_button = ttk.Button(main_frame,  text=translations[current_language]['browse_glossary'], command=on_glossary_select)
+glossary_button.grid(row=6, column=2, padx=10, pady=10, sticky='w')
+glossary_preview = tk.Listbox(main_frame, height=4, width=65)
+glossary_preview.grid(row=6, column=1, padx=10, pady=10)
 
 translate_button = ttk.Button(main_frame, text=translations[current_language]['translate'], command=on_translate)
 translate_button.grid(row=7, columnspan=3, pady=20)

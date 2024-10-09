@@ -7,7 +7,7 @@ translations = {
         'langs_selected': "Langue(s) sélectionnée(s) :",
         'notify_users': "Prévenir les utilisateurs : (Bientôt disponible)",
         'api_key': "Clé API DeepL :",
-        'glossary': "Glossaire : (Bientôt disponible)",
+        'glossary': "Glossaire : ",
         'translate': "Traduire",
         'stop': "Arrêter",
         'progress': "Traduction : {percentage}%",
@@ -50,6 +50,10 @@ translations = {
         'same_language': "Le fichier {file} est déjà en {language}.",
         'confirm_unzip': "Le répertoire 'Stories' est manquant. Voulez-vous dézipper le fichier IDML?",
         'same_language_warning': "Vous ne pouvez pas traduire dans une langue similaire à la langue d'origine.",
+        'browse_glossary': "Parcourir Glossaire",
+        'glossary_loaded': "Le glossaire a été chargé avec succès.",
+        'error_loading_glossary': "Erreur lors du chargement du glossaire : {error}",
+        'error_creating_glossary': "Erreur lors de la création du glossaire : {error}",
     },
     'en': {
         'title': "Indesign Translation",
@@ -57,7 +61,7 @@ translations = {
         'langs_selected': "Selected Language(s) :",
         'notify_users': "Notify Users : (Coming Soon)",
         'api_key': "DeepL API Key :",
-        'glossary': "Glossary : (Coming Soon)",
+        'glossary': "Glossary :",
         'translate': "Translate",
         'stop': "Stop",
         'progress': "Translation : {percentage}%",
@@ -100,6 +104,10 @@ translations = {
         'same_language': "File {file} is already in {language}.",
         'confirm_unzip': "The 'Stories' directory is missing. Would you like to unzip the IDML file?",
         'same_language_warning': "You cannot translate to a language similar to the source language.",
+        'browse_glossary': "Browse Glossary",
+        'glossary_loaded': "Glossary loaded successfully.",
+        'error_loading_glossary': "Error loading glossary: {error}",
+        'error_creating_glossary': "Error creating glossary: {error}",
     }
 }
 
