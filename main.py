@@ -1,10 +1,8 @@
 from translations import translations, load_translation_text
 from utils import check_and_install_modules, is_valid_api_key, load_api_key, save_api_key
 
-# Vérification et installation des modules requis
 check_and_install_modules()
 
-# Importation des modules après vérification et installation
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk
@@ -19,18 +17,15 @@ import shutil
 import requests
 import pandas as pd
 
-# Initial setup
 current_language = 'fr'
 source_language = 'FR'
 stop_translation = False
 current_temp_dir = None
 output_path = None
-temp_dirs = []  # Liste pour stocker les chemins des dossiers Temp créés
+temp_dirs = []
 
-# Load long messages
 long_messages = load_translation_text()
 
-# Main functions
 def translate_ui():
     lang = translations[current_language]
     root.title(lang['title'])
@@ -107,51 +102,36 @@ def on_glossary_select():
         translate_button.config(state=tk.NORMAL)
         glossary_preview.delete(0, tk.END)
         global glossary_file_path
-        glossary_file_path = glossary_path  # Stocker le chemin complet du fichier Excel
+        glossary_file_path = glossary_path
         glossary_preview.insert(tk.END, os.path.basename(glossary_path))
         if glossary_file_path:
             show_message('info', 'glossary_loaded')
 
 def load_glossary(glossary_path):
     try:
-        # Débogage : Impression du chemin du fichier glossaire
         print(f"Chemin du fichier glossaire : {glossary_path}")
-
-        # Charger le fichier Excel
         df = pd.read_excel(glossary_path)
         print("Fichier Excel chargé avec succès")
-
-        # Nettoyage des colonnes pour enlever d'éventuels espaces avant ou après les noms
         df.columns = df.columns.str.strip()
 
-        # Vérification de la présence des colonnes 'Source' et 'Target'
         if 'Source' not in df.columns or 'Target' not in df.columns:
             raise ValueError("Les colonnes 'Source' et 'Target' doivent être présentes dans le fichier Excel.")
+        
         print("Colonnes Source et Target trouvées")
-
-        # Supprimer les lignes où l'une des colonnes est vide
         df = df.dropna(subset=['Source', 'Target'])
+        source_words = df["Source"].tolist()
+        target_words = df["Target"].tolist()
 
-        # Extraction des colonnes et création du glossaire
-        source_words = df["Source"].tolist()  # Liste des mots sources
-        target_words = df["Target"].tolist()  # Liste des mots cibles
-
-        # Vérification : Assurer que les deux listes ont la même longueur
         if len(source_words) != len(target_words):
             raise ValueError("Les colonnes Source et Target ne correspondent pas en longueur.")
-
-        # Débogage : Impression des listes de mots source et cible
+        
         print(f"Mots source : {source_words}")
         print(f"Mots cible : {target_words}")
-
-        # Création du dictionnaire du glossaire
         glossary_dict = dict(zip(source_words, target_words))
-
-        # Vérification : Assurer que glossary_dict est bien un dictionnaire
         if not isinstance(glossary_dict, dict):
+
             raise ValueError("Erreur lors de la création du glossaire. Le glossaire n'est pas au format attendu.")
         
-        # Debugging: Vérifie que glossary_dict est un dictionnaire
         print(f"Type de glossary_dict : {type(glossary_dict)}")
         print(f"Contenu de glossary_dict : {glossary_dict}")
 
@@ -164,22 +144,16 @@ def load_glossary(glossary_path):
     
 def create_deepl_glossary(translator, glossary_name, source_lang, target_lang, glossary_dict):
     try:
-        # Vérifiez que glossary_dict est bien un dictionnaire
         if not isinstance(glossary_dict, dict):
             raise ValueError(f"Le glossaire doit être un dictionnaire, mais un {type(glossary_dict).__name__} a été trouvé.")
 
-        # Débogage : Impression du dictionnaire avant conversion en liste d'entrées
         print(f"Glossaire reçu pour la création : {glossary_dict}")
-        
-        # Convertir le glossaire en liste de paires
         glossary_entries = {src: tgt for src, tgt in glossary_dict.items()}
         print(f"Entrées de glossaire pour Deepl : {glossary_entries}")
-
-        # Créer le glossaire dans DeepL
         glossary = translator.create_glossary(name=glossary_name, source_lang=source_lang, target_lang=target_lang, entries=glossary_entries)
         print(f"Glossaire créé avec succès, ID : {glossary.glossary_id}")
 
-        return glossary.glossary_id  # Renvoie l'ID du glossaire créé
+        return glossary.glossary_id
     except Exception as e:
         show_error('error', 'error_creating_glossary', error=str(e))
         print(f"Erreur lors de la création du glossaire : {str(e)}")
@@ -279,7 +253,7 @@ def delete_temp_dirs():
 def on_translate():
     global stop_translation, source_language, temp_dirs, current_temp_dir, output_path
     stop_translation = False
-    temp_dirs = []  # Réinitialisation de la liste des dossiers temporaires
+    temp_dirs = []
     
     def run_translation():
         api_key = api_key_entry.get()
@@ -326,9 +300,8 @@ def on_translate():
                 enable_buttons()
                 return
 
-        # Charger le glossaire depuis le fichier Excel sélectionné (optionnel)
-        if glossary_preview.size() > 0:  # Vérifier qu'un fichier est sélectionné
-            glossary_dict = load_glossary(glossary_file_path)  # Utiliser le chemin complet du fichier pour charger le glossaire
+        if glossary_preview.size() > 0:
+            glossary_dict = load_glossary(glossary_file_path)
         else:
             glossary_dict = None
 
@@ -341,7 +314,7 @@ def on_translate():
                 enable_buttons()
                 return
         else:
-            glossary_id = None  # Aucun glossaire utilisé si non sélectionné
+            glossary_id = None
             print("Aucun glossaire sélectionné, la traduction se lance sans glossaire.")
 
 
@@ -413,7 +386,6 @@ def on_translate():
             output_dir = os.path.dirname(output_path)
             os.startfile(output_dir)
 
-        # Supprimer les dossiers Temp créés
         delete_temp_dirs()
 
         enable_buttons()
@@ -442,7 +414,6 @@ def translate_stories(directory, target_langs, progress_bar, total_files, progre
             show_error('error', 'error_parsing', file=file_path, error=str(e))
             continue
         
-        # Parcourir chaque élément XML et traduire le texte
         for elem in xml_root.iter():
             if stop_translation:
                 break
@@ -450,18 +421,16 @@ def translate_stories(directory, target_langs, progress_bar, total_files, progre
                 original_text = elem.text
                 for target_lang in target_langs:
                     try:
-                        # Débogage : Impression du texte original et des paramètres de traduction
                         print(f"Texte original : {original_text}")
                         print(f"Langue source : {source_language}, Langue cible : {target_lang}")
                         print(f"Glossaire utilisé : {glossary_id}")
 
-                        # Traduire le texte avec l'API Deepl et utiliser le glossaire
                         translated_text = translator.translate_text(
                             original_text, 
                             source_lang=source_language,
                             target_lang=target_lang, 
                             preserve_formatting=True,
-                            glossary=glossary_id  # Utilisation du glossaire
+                            glossary=glossary_id
                         )
                         detected_language = translated_text.detected_source_lang
                         if detected_language.upper() == source_language:
@@ -475,14 +444,12 @@ def translate_stories(directory, target_langs, progress_bar, total_files, progre
                         continue
 
         try:
-            # Sauvegarder les fichiers XML modifiés
             tree.write(file_path, encoding='UTF-8', xml_declaration=True)
         except IOError as e:
             show_error('error', 'error_writing', file=file_path, error=str(e))
             print(f"Erreur lors de la sauvegarde du fichier : {str(e)}")
 
         translated_files += 1
-        # Correction pour ne pas dépasser 100%
         percentage = min(int(translated_files / total_files * 100), 100)
 
         progress_bar['value'] = percentage
@@ -492,11 +459,10 @@ def translate_stories(directory, target_langs, progress_bar, total_files, progre
     return translated_files
 
 def create_idml_zip(source_file, target_lang, progress_bar, total_files, progress_label, root, translator, glossary_id=None, translated_files=0):
-    global current_temp_dir, output_path, temp_dirs  # Ajoutez temp_dirs ici
+    global current_temp_dir, output_path, temp_dirs
     temp_file = os.path.join(os.path.dirname(source_file), 'Temp')
     current_temp_dir = temp_file
 
-    # Ajout du dossier Temp à la liste des dossiers temporaires
     temp_dirs.append(temp_file)
 
     try:
@@ -508,7 +474,6 @@ def create_idml_zip(source_file, target_lang, progress_bar, total_files, progres
     
     translated_files = translate_stories(temp_file, [target_lang], progress_bar, total_files, progress_label, root, translator, glossary_id, translated_files)
 
-    # Création du fichier IDML traduit
     base_name = os.path.splitext(os.path.basename(source_file))[0]
     now = datetime.datetime.now()
     year = now.strftime("%Y")
@@ -538,7 +503,6 @@ def create_idml_zip(source_file, target_lang, progress_bar, total_files, progres
                         zf.write(file_path, arcname=arcname)
     
     return output_path, translated_files
-
 
 # Main GUI setup
 root = tk.Tk()

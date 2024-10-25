@@ -50,8 +50,9 @@ def get_api_key_filepath():
         return os.path.join(documents_path, '.deepl_api_key.txt')
 
 def is_valid_api_key(api_key):
-    pattern = r'^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}:fx$'
-    return bool(re.match(pattern, api_key))
+    free_pattern = r'^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}:fx$'
+    paid_pattern = r'^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{11}[a-z]$'
+    return bool(re.match(free_pattern, api_key)) or bool(re.match(paid_pattern, api_key))
 
 def hide_file(filepath):
     if platform.system() == 'Windows':
@@ -64,12 +65,20 @@ def hide_file(filepath):
 def save_api_key(api_key):
     file_path = get_api_key_filepath()
     try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
         with open(file_path, 'w') as key_file:
             key_file.write(api_key)
+        if platform.system() == 'Windows':
+            pass
+        else:
+            os.chmod(file_path, 0o600)
         hide_file(file_path)
-        print(f"Clé API sauvegardée et cachée à l'emplacement: {file_path}")
+        print(f"Clé API sauvegardée et cachée à l'emplacement : {file_path}")
     except PermissionError as e:
-        print(f"Erreur lors de l'enregistrement de la clé API : {str(e)}")
+        print(f"Erreur lors de l'enregistrement de la clé API : {str(e)}. Vérifiez les permissions du fichier.")
+    except Exception as e:
+        print(f"Erreur inattendue lors de l'enregistrement de la clé API : {str(e)}")
 
 def load_api_key():
     file_path = get_api_key_filepath()
