@@ -383,8 +383,11 @@ def on_translate():
         stop_button.grid_forget()
 
         if translated_files and not stop_translation:
-            output_dir = os.path.dirname(output_path)
-            os.startfile(output_dir)
+            output_dir = os.path.normpath(os.path.dirname(output_path))
+            if os.path.exists(output_dir):
+                os.startfile(output_dir)
+            else:
+                print(f"Erreur : le chemin spécifié n'existe pas -> {output_dir}")
 
         delete_temp_dirs()
 
