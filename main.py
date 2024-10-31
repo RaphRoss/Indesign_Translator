@@ -308,15 +308,22 @@ def on_translate():
         if glossary_dict:
             if isinstance(glossary_dict, dict):
                 print(f"Glossaire chargé et prêt pour la création : {glossary_dict}")
-                glossary_id = create_deepl_glossary(translator, "MonGlossaire", source_language, "EN-US", glossary_dict)
+                compatible_target_lang = next((lang for lang in selected_languages if lang == "EN-US" or "ES" or "DE"), None)
+                if compatible_target_lang:
+                    glossary_id = create_deepl_glossary(
+                        translator,
+                        glossary_name="MonGlossaire",
+                        source_lang=source_language,
+                        target_lang=compatible_target_lang,
+                        glossary_dict=glossary_dict
+                    )
+                else:
+                    print("Aucune langue compatible avec le glossaire sélectionnée.")
+                    glossary_id = None
             else:
                 print(f"Erreur : glossary_dict n'est pas un dictionnaire, mais un {type(glossary_dict).__name__}")
                 enable_buttons()
                 return
-        else:
-            glossary_id = None
-            print("Aucun glossaire sélectionné, la traduction se lance sans glossaire.")
-
 
         total_files = 0
         for file in files:
