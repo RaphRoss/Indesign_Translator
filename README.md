@@ -45,7 +45,7 @@ Ensure these packages are installed by running the setup script or manually inst
     Run the script to install the required Python packages:
 
     ```bash
-    python setup.py
+    python main.py
     ```
 
 3. **Prepare the environment:**
@@ -57,7 +57,7 @@ Ensure these packages are installed by running the setup script or manually inst
     Execute the main script to start the application:
 
     ```bash
-    python Main.py
+    python main.py
     ```
 
 ## Usage
