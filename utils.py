@@ -8,7 +8,7 @@ import platform
 
 # Liste des modules nécessaires (exclure tkinter car il est intégré)
 required_modules = [
-    'deepl', 'PIL', 'tkinter', 'requests', 'xml.etree.ElementTree', 'platform',
+    'deepl', ('PIL','pillow'), 'tkinter', 'requests', 'xml.etree.ElementTree', 'platform',
     'os', 're', 'subprocess', 'importlib', 'sys', 'json', 'io', 'time', 'datetime',
     'pandas', 'openpyxl'
 ]
@@ -24,18 +24,24 @@ def check_and_install_modules():
 
     for module in required_modules:
         try:
-            importlib.import_module(module)
-            print(f"Le module '{module}' est déjà installé.")
+            if isinstance(module,tuple) and len(module) == 2:
+                module_name = module[0]
+                install_name = module [1]
+            else:
+                module_name = module
+                install_name = module
+            importlib.import_module(module_name)
+            print(f"Le module '{install_name}' est déjà installé.")
         except ImportError:
-            print(f"Le module '{module}' n'est pas installé. Installation en cours...")
+            print(f"Le module {f"'{install_name}'"} n'est pas installé. Installation en cours...")
             try:
                 # Tentative d'installation du module
-                subprocess.check_call([sys.executable, "-m", "pip", "install", module])
+                subprocess.check_call([sys.executable, "-m", "pip", "install", install_name])
                 # Vérification après installation
-                importlib.import_module(module)
-                print(f"Le module '{module}' a été installé.")
+                importlib.import_module(module_name)
+                print(f"Le module '{install_name}' a été installé.")
             except Exception as e:
-                print(f"Erreur lors de l'installation du module '{module}': {e}")
+                print(f"Erreur lors de l'installation du module '{install_name}': {e}")
                 print("Assurez-vous que l'environnement d'exécution permet l'installation de nouveaux modules.")
                 raise
 
